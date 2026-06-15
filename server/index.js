@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const { Pool } = require('pg');
 const app = express();
 app.use(express.json({ limit: '2mb' }));
 
@@ -10,6 +11,24 @@ if (!ANTHROPIC_API_KEY) {
   console.error('\n❌  ANTHROPIC_API_KEY is not set — please add it in Railway environment variables.\n');
   process.exit(1);
 }
+
+// PostgreSQL connection pool
+if (!process.env.DATABASE_URL) {
+  console.warn('\n⚠️   DATABASE_URL is not set — database features will be unavailable.\n');
+}
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+pool.connect()
+  .then(client => {
+    console.log('✅  Connected to PostgreSQL database');
+    client.release();
+  })
+  .catch(err => {
+    console.error('❌  Failed to connect to PostgreSQL database:', err.message);
+  });
 
 // Proxy to Anthropic
 app.post('/api/messages', async (req, res) => {
@@ -29,6 +48,17 @@ app.post('/api/messages', async (req, res) => {
   } catch (err) {
     console.error('Proxy error:', err.message);
     res.status(500).json({ error: { type: 'proxy_error', message: err.message } });
+  }
+});
+
+// Health check — verifies database connectivity
+app.get('/api/health', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT NOW() AS now');
+    res.json({ status: 'ok', db_time: result.rows[0].now });
+  } catch (err) {
+    console.error('Health check failed:', err.message);
+    res.status(503).json({ status: 'error', message: err.message });
   }
 });
 
