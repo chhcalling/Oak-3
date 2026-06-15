@@ -62,11 +62,6 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`✅  Oak Insight running on port ${PORT}`);
-});
-
 // Serve built React app in production
 // NOTE: must be registered AFTER all API routes so the catch-all does not
 // intercept requests like /api/health before they reach their handlers.
@@ -77,3 +72,8 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`✅  Oak Insight running on port ${PORT}`);
+});
